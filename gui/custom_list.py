@@ -3,4 +3,8 @@ from PyQt5.QtWidgets import QListWidget
 
 
 class CustomList(QListWidget):
-    pass
+    def sizeHint(self):
+        s = QSize()
+        s.setHeight(super(CustomList, self).sizeHint().height())
+        s.setWidth(self.sizeHintForColumn(0) + 25)
+        return s

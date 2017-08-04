@@ -7,20 +7,27 @@ from gui.main_widget import MainWidget
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = MainWidget()
-    app.setStyleSheet("QWidget#main{padding: 0px; background-color:rgb(255,255,255);}"
+    app.setStyleSheet("QWidget#main{padding: 0px; background-color:#f5f5f5;}"
                       "QListWidget{ \
-                            font-size: 20 px; \
+                            font-size: 15 px; \
                             color: black; \
                             text-align: center; \
                             border: none; \
-                            border-right: 1px solid grey; \
-                            background-color: gray; \
-                            margin: 0px; \
+                            border-right: 1px solid rgb(179, 179, 179, 40); \
+                            background-color: #e6e6e6; \
+                            margin: 0px; padding-top:50px;\
+                            outline: none;\
                       }"
                       "QListView::item{ \
-                            margin-bottom:20px; \
-                            padding-top: 20 px; \
-                            border-bottom: 1px solid gray \
+                            padding: 20px;\
+                            color: #404040 \
+                      }"
+                      "QListView::item:selected, "
+                      "QListView::item:selected:!active, "
+                      "QListView::item:checked,"
+                      "QListView::item:selected:active{ \
+                          background-color: rgb(216,216,216); \
+                          \
                       }"
 
 
