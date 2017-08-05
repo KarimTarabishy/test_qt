@@ -40,6 +40,7 @@ class MainWidget(QWidget):
         self.stack.addWidget(TestingWidget())
 
         self.list.currentRowChanged.connect(self.stack.setCurrentIndex)
+        box.setSpacing(70)
         box.addWidget(self.list)
         box.addLayout(self.stack)
         self.setLayout(box)

@@ -25,11 +25,10 @@ if __name__ == '__main__':
                       "QListView::item:selected, "
                       "QListView::item:selected:!active, "
                       "QListView::item:checked,"
+                      "QListView::item:hover,"
                       "QListView::item:selected:active{ \
                           background-color: rgb(216,216,216); \
                           \
                       }"
-
-
                       )
     sys.exit(app.exec_())

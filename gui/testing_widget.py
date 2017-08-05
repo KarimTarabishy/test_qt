@@ -11,3 +11,4 @@ class TestingWidget(QWidget):
         but = QPushButton("Testing")
         box.addWidget(but)
         self.setLayout(box)
+        self.setMinimumSize(600, 400)
