@@ -9,6 +9,7 @@ class TrainingWidget(QWidget):
     save_dir_selected = pyqtSignal(str)
     test_count = pyqtSignal(str)
     train_count = pyqtSignal(str)
+    training = pyqtSignal(bool)
 
     def __init__(self):
         super().__init__()
@@ -18,8 +19,8 @@ class TrainingWidget(QWidget):
         self.text_edit = None
         self.is_training = False
         self.runner_thread = None
+        self.worker = None
         self.init_ui()
-
 
 
     def init_ui(self):
@@ -92,6 +93,7 @@ class TrainingWidget(QWidget):
         self.train_button.setMaximumWidth(300)
         self.train_button.setEnabled(False)
         self.train_button.pressed.connect(self.start_training)
+        self.training.connect(self.train_button.setDisabled)
 
         ##QTextEdit
         status_label = QLabel("Info: ")
@@ -114,8 +116,8 @@ class TrainingWidget(QWidget):
         vbox.addStretch(1)
         self.setLayout(vbox)
 
+        self.setSizePolicy(size)
         self.setObjectName("training")
-        self.setMinimumSize(600, 400)
 
     def change_train_button_state(self):
         try:
@@ -128,10 +130,12 @@ class TrainingWidget(QWidget):
 
     @pyqtSlot()
     def start_training(self):
+        self.training.emit(True)
         self.runner_thread = QThread()
-        runner = TrainRunner(self.runner_thread.started, self.data_dir, self.save_dir)
-        runner.msg_from_job.connect(self.handleRunner)
-        runner.moveToThread(self.runner_thread)
+        self.worker = TrainRunner(self.data_dir, self.save_dir)
+        self.worker.moveToThread(self.runner_thread)
+        self.worker.msg_from_job.connect(self.handleRunner)
+        self.runner_thread.started.connect(self.worker.run)
         self.runner_thread.start()
 
 
@@ -140,6 +144,11 @@ class TrainingWidget(QWidget):
         if obj.type == "command" and obj.data == "end":
             self.text_edit.append("Done.\n")
             self.runner_thread.quit()
+            self.training.emit(False)
+
+        elif obj.type == "epoch_logs":
+            self.text_edit.append("accuracy: " + str(obj.data["acc"]) + ", validation_accuracy: " +
+                                  str(obj.data["val_acc"]))
         elif obj.type == "text":
             self.text_edit.append(obj.data + "\n")
 

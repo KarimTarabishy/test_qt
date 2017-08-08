@@ -1,3 +1,4 @@
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QGraphicsDropShadowEffect
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QSizePolicy, QStackedLayout, QFrame, QListWidgetItem
@@ -12,6 +13,10 @@ class MainWidget(QWidget):
         super().__init__()
         self.list = None
         self.stack = None
+        self.train_item = None
+        self.test_item = None
+        self.training_widget = None
+        self.testing_widget = None
         self.init_ui()
 
     def init_ui(self):
@@ -20,12 +25,12 @@ class MainWidget(QWidget):
         self.list = CustomList()
         self.list.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
         self.list.setSelectionMode(CustomList.SingleSelection)
-        train = QListWidgetItem("Training")
-        train.setTextAlignment(QtCore.Qt.AlignCenter)
-        test = QListWidgetItem("Testing")
-        test.setTextAlignment(QtCore.Qt.AlignCenter)
-        self.list.addItem(train)
-        self.list.addItem(test)
+        self.train_item = QListWidgetItem("Training")
+        self.train_item.setTextAlignment(QtCore.Qt.AlignCenter)
+        self.test_item = QListWidgetItem("Testing")
+        self.test_item.setTextAlignment(QtCore.Qt.AlignCenter)
+        self.list.addItem(self.train_item)
+        self.list.addItem(self.test_item)
         self.list.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.list.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         shadow = QGraphicsDropShadowEffect()
@@ -36,8 +41,11 @@ class MainWidget(QWidget):
         self.list.setCurrentRow(0)
 
         self.stack = QStackedLayout()
-        self.stack.addWidget(TrainingWidget())
-        self.stack.addWidget(TestingWidget())
+        self.training_widget = TrainingWidget()
+        self.training_widget.training.connect(self.handle_training)
+        self.testing_widget = TestingWidget()
+        self.stack.addWidget(self.training_widget)
+        self.stack.addWidget(self.testing_widget)
 
         self.list.currentRowChanged.connect(self.stack.setCurrentIndex)
         box.setSpacing(70)
@@ -45,8 +53,16 @@ class MainWidget(QWidget):
         box.addLayout(self.stack)
         self.setLayout(box)
 
-
         self.setObjectName("main")
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.setWindowFlags(QtCore.Qt.Widget | QtCore.Qt.MSWindowsFixedSizeDialogHint)
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.setWindowTitle('Demo')
         self.show()
+
+    @pyqtSlot(bool)
+    def handle_training(self, is_running):
+        if is_running:
+            self.test_item.setFlags(self.test_item.flags() & ~QtCore.Qt.ItemIsEnabled)
+        else:
+            self.test_item.setFlags(self.test_item.flags() | QtCore.Qt.ItemIsEnabled)

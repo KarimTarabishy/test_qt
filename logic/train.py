@@ -2,18 +2,6 @@
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from multiprocessing import Process, Queue
 from .message import Message
-import keras
-
-class KerasCallback(keras.callbacks.Callback):
-    def __init__(self, queue):
-        super(KerasCallback, self).__init__()
-        self.queue = queue
-
-    def on_epoch_end(self, epoch, logs={}):
-        print(epoch)
-        print(logs)
-        return
-
 
 
 class TrainRunner(QObject):
@@ -25,18 +13,18 @@ class TrainRunner(QObject):
 
     msg_from_job = pyqtSignal(object)
 
-    def __init__(self, start_signal, data_dir, save_dir):
+    def __init__(self, data_dir, save_dir):
         """
         :param start_signal: the pyqtSignal that starts the job
 
         """
         super(TrainRunner, self).__init__()
-        start_signal.connect(self._run)
         self.data_dir = data_dir
         self.save_dir = save_dir
 
     @pyqtSlot()
-    def _run(self):
+    def run(self):
+        print("in thread")
         queue = Queue()
         p = Process(target=train, args=(queue, self.data_dir, self.save_dir ))
         p.start()
@@ -54,6 +42,23 @@ def train(queue, data_dir, save_dir):
     from keras.layers import Dense, Dropout, Flatten
     from keras.layers import Conv2D, MaxPooling2D
     from keras import backend as K
+
+    class KerasCallback(keras.callbacks.Callback):
+        def __init__(self, queue):
+            super(KerasCallback, self).__init__()
+            self.queue = queue
+            self.epoch_number = 0
+
+        def on_batch_begin(self, batch, logs=None):
+            print(batch)
+            print(logs)
+            pass
+
+        def on_epoch_end(self, epoch, logs={}):
+            self.epoch_number += 1
+            logs["epoch_number"] = self.epoch_number
+            self.queue.put(Message("epoch_logs", logs))
+            return
 
     batch_size = 128
     num_classes = 10
@@ -100,10 +105,10 @@ def train(queue, data_dir, save_dir):
     queue.put(Message("text", "Training..."))
     model.fit(x_train, y_train,
               batch_size=batch_size,
-              epochs=epochs,
+              epochs=1,
               verbose=1,
               validation_data=(x_test, y_test),
-              callbacks=KerasCallback(queue))
+              callbacks=[KerasCallback(queue)])
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
