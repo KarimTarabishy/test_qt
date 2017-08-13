@@ -63,7 +63,7 @@ def train(queue, data_dir, save_dir):
     batch_size = 128
     num_classes = 10
     epochs = 2
-
+    queue.put(Message("total_epochs", epochs))
     # input image dimensions
     img_rows, img_cols = 28, 28
 

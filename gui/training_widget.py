@@ -1,8 +1,12 @@
-from PyQt5.QtWidgets import QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QLabel, QFileDialog, QSizePolicy, QTextEdit
+from PyQt5.QtWidgets import QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QLabel, QFileDialog, QSizePolicy, QTextEdit, \
+    QProgressBar
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, Qt, QThread
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+import matplotlib.pyplot as plt
 import os
 from .util import showError
 from logic.train import TrainRunner
+import weakref
 
 class TrainingWidget(QWidget):
     data_dir_selected = pyqtSignal(str)
@@ -20,6 +24,7 @@ class TrainingWidget(QWidget):
         self.is_training = False
         self.runner_thread = None
         self.worker = None
+        self.training_info_box = {}
         self.init_ui()
 
 
@@ -95,14 +100,8 @@ class TrainingWidget(QWidget):
         self.train_button.pressed.connect(self.start_training)
         self.training.connect(self.train_button.setDisabled)
 
-        ##QTextEdit
-        status_label = QLabel("Info: ")
-        status_label.setSizePolicy(size)
 
-        self.text_edit = QTextEdit()
-        self.text_edit.setFixedHeight(100)
-        self.text_edit.setReadOnly(True)
-
+        train_info_layout = self.create_training_info()
 
         vbox.setSpacing(20)
         vbox.addLayout(data_hbox)
@@ -111,13 +110,47 @@ class TrainingWidget(QWidget):
         vbox.addLayout(save_hbox)
         vbox.addSpacing(40)
         vbox.addWidget(self.train_button)
-        vbox.addWidget(status_label)
-        vbox.addWidget(self.text_edit)
+        vbox.addLayout(train_info_layout)
         vbox.addStretch(1)
         self.setLayout(vbox)
 
         self.setSizePolicy(size)
         self.setObjectName("training")
+
+
+    def set_training_visible(self, visible):
+        self.training_info_box["text_edit_label"].setVisible(visible)
+        self.training_info_box["text_edit"].setVisible(visible)
+        self.training_info_box["bar"].setVisible(visible)
+        self.training_info_box["figure"].set_visible(visible)
+        plt.draw()
+
+    def create_training_info(self):
+        self.training_info_box["layout"] = QVBoxLayout()
+
+        size = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        ##QTextEdit
+        self.training_info_box["text_edit_label"] = QLabel("Info: ")
+        self.training_info_box["text_edit_label"].setSizePolicy(size)
+        self.training_info_box["text_edit"] = QTextEdit()
+        self.training_info_box["text_edit"].setFixedHeight(100)
+        self.training_info_box["text_edit"].setReadOnly(True)
+
+        ## Progress bar
+        self.training_info_box["bar"] = QProgressBar()
+
+        ## matplotlib
+        self.training_info_box["figure"] = plt.figure()
+        self.training_info_box["canvas"] = FigureCanvas(self.training_info_box["figure"])
+
+        self.training_info_box["layout"].addWidget(self.training_info_box["text_edit_label"])
+        self.training_info_box["layout"].addWidget(self.training_info_box["text_edit"])
+        self.training_info_box["layout"].addWidget(self.training_info_box["bar"])
+        self.training_info_box["layout"].addWidget(self.training_info_box["canvas"])
+        self.set_training_visible(False)
+        return self.training_info_box["layout"]
+
+
 
     def change_train_button_state(self):
         try:
@@ -145,6 +178,15 @@ class TrainingWidget(QWidget):
             self.text_edit.append("Done.\n")
             self.runner_thread.quit()
             self.training.emit(False)
+
+        elif obj.type == "total_epochs":
+            self.set_training_visible(True)
+            axis = self.training_info_box["figure"].gca()
+            axis.y_limit([0,1])
+            axis.x_limit([0, obj.data])
+            self.training_info_box["bar"].setMinimum(0)
+            self.training_info_box["bar"].setMaximum(obj.data)
+
 
         elif obj.type == "epoch_logs":
             self.text_edit.append("accuracy: " + str(obj.data["acc"]) + ", validation_accuracy: " +
